@@ -1,6 +1,7 @@
 import './shims.js';
 import { Server } from '../index.js';
 import { manifest } from '../manifest.js';
+import { split_headers } from './headers.js';
 
 const server = new Server(manifest);
 const init = server.init({ env: process.env });
@@ -16,6 +17,8 @@ export async function handler(event) {
 
   await init;
 
+  console.log("Using local fixed version");
+
   const rendered = await server.respond(
     new Request(rawURL, {
       method,
@@ -29,24 +32,17 @@ export async function handler(event) {
     }
   );
 
+
   if (rendered) {
     const resp = {
-      headers: {
-        'cache-control': 'no-cache',
-      },
-      multiValueHeaders: {},
+      ...split_headers(rendered.headers),
       body: await rendered.text(),
       statusCode: rendered.status,
     };
 
-    for (let k of rendered.headers.keys()) {
-      const v = rendered.headers.get(k);
-      if (v instanceof Array) {
-        resp.multiValueHeaders[k] = v;
-      } else {
-        resp.headers[k] = v;
-      }
-    }
+    console.log('response:');
+    console.log(resp)
+    resp.headers['cache-control'] = 'no-cache';
     return resp;
   }
 

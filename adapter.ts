@@ -60,6 +60,7 @@ export function adapter({
       await builder.writeServer(artifactPath);
       copyFileSync(`${__dirname}/lambda/serverless.js`, `${server_directory}/_index.js`);
       copyFileSync(`${__dirname}/lambda/shims.js`, `${server_directory}/shims.js`);
+      copyFileSync(`${__dirname}/lambda/headers.js`, `${server_directory}/headers.js`);
 
       builder.log.minor('Building AWS Lambda server function.');
       esbuild.buildSync({
