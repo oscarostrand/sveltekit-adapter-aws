@@ -16,6 +16,7 @@ export interface AWSAdapterProps {
   LOG_RETENTION_DAYS?: number;
   MEMORY_SIZE?: number;
   zoneName?: string;
+  mode?: string,
   env?: { [key: string]: string };
 }
 
@@ -29,13 +30,16 @@ export function adapter({
   LOG_RETENTION_DAYS,
   MEMORY_SIZE,
   zoneName = '',
+  mode = '',
   env = {},
 }: AWSAdapterProps = {}) {
   /** @type {import('@sveltejs/kit').Adapter} */
   return {
     name: 'adapter-awscdk',
     async adapt(builder: any) {
-      const environment = config({ path: join(process.cwd(), '.env') });
+
+      const envFile = mode === '' ? '.env' : `.env.${mode}`
+      const environment = config({ path: join(process.cwd(), envFile) });
       emptyDirSync(artifactPath);
 
       const static_directory = join(artifactPath, 'assets');
@@ -120,7 +124,7 @@ export function adapter({
             stdio: [process.stdin, process.stdout, process.stderr],
             env: Object.assign(
               {
-                PROJECT_PATH: join(process.cwd(), '.env'),
+                PROJECT_PATH: join(process.cwd(), envFile),
                 SERVER_PATH: join(process.cwd(), server_directory),
                 STATIC_PATH: join(process.cwd(), static_directory),
                 PRERENDERED_PATH: join(process.cwd(), prerendered_directory),

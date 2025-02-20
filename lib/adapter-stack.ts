@@ -140,6 +140,8 @@ export class AWSAdapterStack extends Stack {
       });
     });
 
+    //todo add auth route behavior
+
     if (process.env.FQDN) {
       new aws_route53.ARecord(this, 'ARecord', {
         recordName: process.env.FQDN,
