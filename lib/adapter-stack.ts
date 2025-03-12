@@ -34,6 +34,7 @@ export class AWSAdapterStack extends Stack {
   httpApi: IHttpApi;
   hostedZone: aws_route53.IHostedZone;
   certificate: aws_certificatemanager.ICertificate;
+  mode: string;
 
   constructor(scope: Construct, id: string, props: AWSAdapterStackProps) {
     super(scope, id, props);
@@ -48,6 +49,8 @@ export class AWSAdapterStack extends Stack {
     const environment = config({ path: projectPath });
     const [_, zoneName, ...MLDs] = process.env.FQDN?.split('.') || [];
     const domainName = [zoneName, ...MLDs].join(".");
+
+    this.mode = process.env.MODE ?? 'dev';
 
     this.serverHandler = new aws_lambda.Function(this, 'LambdaServerFunctionHandler', {
       code: new aws_lambda.AssetCode(serverPath!),

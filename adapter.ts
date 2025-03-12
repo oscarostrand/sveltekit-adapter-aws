@@ -134,6 +134,7 @@ export function adapter({
                 LOG_RETENTION_DAYS,
                 MEMORY_SIZE,
                 ZONE_NAME: zoneName,
+                MODE: mode,
               },
               process.env,
               env
