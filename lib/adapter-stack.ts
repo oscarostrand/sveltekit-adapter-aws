@@ -1,24 +1,25 @@
 import { Construct } from 'constructs';
 import {
-  StackProps,
-  Stack,
-  Fn,
-  RemovalPolicy,
-  Duration,
-  CfnOutput,
-  aws_lambda,
-  aws_s3,
-  aws_s3_deployment,
-  aws_cloudfront_origins,
   aws_certificatemanager,
+  aws_cloudfront,
+  aws_cloudfront_origins,
+  aws_lambda,
   aws_route53,
   aws_route53_targets,
-  aws_cloudfront,
+  aws_s3,
+  aws_s3_deployment,
+  CfnOutput,
+  Duration,
+  Fn,
+  RemovalPolicy,
+  Stack,
+  StackProps,
 } from 'aws-cdk-lib';
 import { CorsHttpMethod, HttpApi, IHttpApi, PayloadFormatVersion } from '@aws-cdk/aws-apigatewayv2-alpha';
 import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 import { config } from 'dotenv';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { ViewerProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
 
 export interface AWSAdapterStackProps extends StackProps {
   FQDN: string;
@@ -48,7 +49,7 @@ export class AWSAdapterStack extends Stack {
     const memorySize = parseInt(process.env.MEMORY_SIZE!) || 128;
     const environment = config({ path: projectPath });
     const [_, zoneName, ...MLDs] = process.env.FQDN?.split('.') || [];
-    const domainName = [zoneName, ...MLDs].join(".");
+    const domainName = [zoneName, ...MLDs].join('.');
 
     this.mode = process.env.MODE ?? 'dev';
 
@@ -95,6 +96,9 @@ export class AWSAdapterStack extends Stack {
       });
     }
 
+    const apiGatewayOrigin = new aws_cloudfront_origins.HttpOrigin(Fn.select(1, Fn.split('://', this.httpApi.apiEndpoint)), {
+      protocolPolicy: aws_cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+    });
     const distribution = new aws_cloudfront.Distribution(this, 'CloudFrontDistribution', {
       priceClass: aws_cloudfront.PriceClass.PRICE_CLASS_100,
       enabled: true,
@@ -110,9 +114,7 @@ export class AWSAdapterStack extends Stack {
         : undefined,
       defaultBehavior: {
         compress: true,
-        origin: new aws_cloudfront_origins.HttpOrigin(Fn.select(1, Fn.split('://', this.httpApi.apiEndpoint)), {
-          protocolPolicy: aws_cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
-        }),
+        origin: apiGatewayOrigin,
         viewerProtocolPolicy: aws_cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         allowedMethods: aws_cloudfront.AllowedMethods.ALLOW_ALL,
         originRequestPolicy: new aws_cloudfront.OriginRequestPolicy(this, 'OriginRequestPolicy', {
@@ -143,7 +145,19 @@ export class AWSAdapterStack extends Stack {
       });
     });
 
-    //todo add auth route behavior
+    distribution.addBehavior('/auth/*', apiGatewayOrigin, {
+      allowedMethods: aws_cloudfront.AllowedMethods.ALLOW_ALL,
+      cachePolicy: aws_cloudfront.CachePolicy.CACHING_DISABLED,
+      originRequestPolicy: aws_cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+    });
+
+    distribution.addBehavior('/api/*', apiGatewayOrigin, {
+      allowedMethods: aws_cloudfront.AllowedMethods.ALLOW_ALL,
+      cachePolicy: aws_cloudfront.CachePolicy.CACHING_DISABLED,
+      originRequestPolicy: aws_cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+    });
 
     if (process.env.FQDN) {
       new aws_route53.ARecord(this, 'ARecord', {
