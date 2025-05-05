@@ -40,8 +40,6 @@ export async function handler(event) {
       statusCode: rendered.status,
     };
 
-    console.log('response:');
-    console.log(resp)
     resp.headers['cache-control'] = 'no-cache';
     return resp;
   }

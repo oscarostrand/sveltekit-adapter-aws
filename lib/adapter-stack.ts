@@ -56,7 +56,7 @@ export class AWSAdapterStack extends Stack {
     this.serverHandler = new aws_lambda.Function(this, 'LambdaServerFunctionHandler', {
       code: new aws_lambda.AssetCode(serverPath!),
       handler: 'index.handler',
-      runtime: aws_lambda.Runtime.NODEJS_16_X,
+      runtime: aws_lambda.Runtime.NODEJS_22_X,
       timeout: Duration.minutes(15),
       memorySize,
       logRetention,
